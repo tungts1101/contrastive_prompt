@@ -9,5 +9,5 @@ if __name__ == '__main__':
     model = ContrastiveSegmentation({}).to(device)
     utils.log_model_info(model)
     imgs = torch.randn(64, 3, 224, 224).to(device)
-    output = model(imgs)
-    print(output.shape)
+    e, z = model(imgs)
+    print(f"Encoder output shape: {e.shape}, Decoder output shape: {z.shape}")

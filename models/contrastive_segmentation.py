@@ -4,10 +4,9 @@ from torch import nn
 from prompts.vpt_vit_mae import (
     vit_base_patch16
 )
-from segmentation_head.deeplab_head import (
-    DeepLabHead
-)
 from .mlp import MLP
+from torchvision import models
+import torch.nn.functional as F
 
 class ContrastiveSegmentation(nn.Module):
     def __init__(self, cfg, load_pretrain=True):
@@ -34,27 +33,19 @@ class ContrastiveSegmentation(nn.Module):
                 p.requires_grad = False
 
     def setup_head(self, cfg):
-        self.neck = MLP(64 * self.feat_dim, [256 * self.feat_dim])
-        self.head = DeepLabHead(
-            in_channels=self.feat_dim, 
-            num_classes=21) # TODO: config num_classes
+        self.head = models.segmentation.deeplabv3.DeepLabHead(self.feat_dim, 21)
 
-    def forward(self, x, return_feature=False):
+    def forward(self, x):
+        input_shape = x.shape[-2:]
 
         if self.frozen_enc and self.enc.training:
             self.enc.eval()
-        x_enc = self.enc(x)  # batch_size x self.feat_dim
+        y = self.enc(x)  # batch_size x self.feat_dim
+        
+        z = self.head(y.unsqueeze(2).unsqueeze(3))
+        z = F.interpolate(z, size=input_shape, mode='bilinear', align_corners=False)
 
-        if return_feature:
-            return x_enc, x
-
-        x = x_enc.flatten()
-        x = self.neck(x)
-        x = x.view(256, self.feat_dim)
-        x = x.unsqueeze(2).unsqueeze(3)
-        x = self.head(x)
-
-        return x_enc, x
+        return y, z
 
     def get_features(self, x):
         """get a (batch_size, self.feat_dim) feature"""
