@@ -32,6 +32,10 @@ class ContrastiveSegmentation(nn.Module):
         for k, p in self.enc.named_parameters():
             if "prompt" not in k:
                 p.requires_grad = False
+        
+        # self.enc = models.resnet18(pretrained=True)
+        # self.enc.fc = torch.nn.Identity()
+        # self.feat_dim = 512
 
     def setup_head(self, cfg):
         self.head = models.segmentation.deeplabv3.DeepLabHead(self.feat_dim, 21)
@@ -41,12 +45,12 @@ class ContrastiveSegmentation(nn.Module):
 
         if self.frozen_enc and self.enc.training:
             self.enc.eval()
-        y = self.enc(x)  # batch_size x self.feat_dim
+        x = self.enc(x)  # batch_size x self.feat_dim
         
-        z = self.head(y.unsqueeze(2).unsqueeze(3))
+        z = self.head(x.unsqueeze(2).unsqueeze(3))
         z = F.interpolate(z, size=input_shape, mode='bilinear', align_corners=False)
 
-        return y, z
+        return x, z
 
     def get_features(self, x):
         """get a (batch_size, self.feat_dim) feature"""
