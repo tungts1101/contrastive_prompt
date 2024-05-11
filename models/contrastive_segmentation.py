@@ -7,6 +7,7 @@ from prompts.vpt_vit_mae import (
 from .mlp import MLP
 from torchvision import models
 import torch.nn.functional as F
+from segmentation_head.deeplab_head import DeepLabHead
 
 class ContrastiveSegmentation(nn.Module):
     def __init__(self, cfg, load_pretrain=True):
